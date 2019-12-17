@@ -55,10 +55,13 @@ dati <- dati%>%mutate(year =year(ymd(amg)))
 
 ## Category unit sales (c, t)
 # vendite totali per una classe c nella settimana t 
+
+medie <- dati %>% select(unita_tot,guadagno,codicepdv,classe) %>% aggregate(as.formula('. ~ codicepdv+classe'),.,mean) %>% rename(unitam = unita_tot,guadagnom=guadagno)
+
 vendite_cl <- dati %>% 
   arrange(codicepdv,classe,year,week) %>% 
   mutate(grp = with(rle(paste0(codicepdv,classe,week,year)), rep(seq_along(lengths), lengths))) %>%
-  mutate(unitmean = mean(unita_tot),guadagnimean = mean(guadagno)) %>%
+  left_join(medie,by=c('codicepdv','classe')) %>%
   group_by(grp) %>%
   summarise(
     codicepdv = unique(codicepdv),
@@ -67,10 +70,11 @@ vendite_cl <- dati %>%
     classe = unique(classe),
     unitatot = sum(unita_tot),
     guadagni_tot = sum(guadagno),
-    season_unita = mean(unita_tot)/unique(unitmean),
-    season_guadagni = mean(guadagno)/unique(guadagnimean)
+    season_unita = mean(unita_tot)/unique(unitam),
+    season_guadagni = mean(guadagno)/unique(guadagnom)
   )
-
+rm(medie)
+gc()
 
 dati <- dati %>% left_join(vendite_cl,by = c('codicepdv','week','year','classe')) 
 
@@ -78,6 +82,4 @@ rm(vendite_cl)
 gc()
 
 dati <- dati %>% select(-c(grp,scontoatipico_tot,daylag,categoria))
-head(dati)
-object.size(dati)
 
