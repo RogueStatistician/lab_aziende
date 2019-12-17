@@ -12,3 +12,5 @@
 ## Total gross lift c,t
 # somma dei gross lift tra tutti i prodotti appartenenti alla classe
 # c a prescindere dalla promo nella settimana t
+
+##### 3
