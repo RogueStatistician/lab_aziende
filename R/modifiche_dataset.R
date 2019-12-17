@@ -5,18 +5,26 @@ library(lubridate)
 setwd('C:\\Users\\Simone\\Documents\\Simone\\Uni\\Aziende')
 connection <- dbConnect(SQLite(),'aziende.db')
 dati <- dbGetQuery(connection, "SELECT * FROM dati WHERE codicepdv NOT LIKE '4255' AND codicepdv NOT LIKE '2291' AND amg BETWEEN '2012-01-01' AND '2013-12-31';")
+dbDisconnect(connection)
+rm(connection)
+gc()
+
 dati <- na.omit(dati)
 
 classi <- read.csv('dati.csv')
 classi$codicearticolo <- as.character(classi$codicearticolo)
 
 
-dati2 <- dati %>% left_join(classi,by='codicearticolo')
-dati2 <- dati2%>%mutate(guadagno = unita_tot*margine)
-dati2 <- dati2%>%mutate(week =week(ymd(amg)))
-dati2 <- dati2%>%mutate(year =year(ymd(amg)))
 
-# dati3 <- dati2 %>% 
+dati <- dati %>% left_join(classi,by='codicearticolo')
+
+rm(classi)
+gc()
+dati <- dati%>%mutate(guadagno = unita_tot*margine)
+dati <- dati%>%mutate(week =week(ymd(amg)))
+dati <- dati%>%mutate(year =year(ymd(amg)))
+
+# dati3 <- dati %>% 
 #   arrange(codicepdv,classe,amg ) %>%
 #   mutate(grp = with(rle(paste0(codicepdv,classe,promo)), rep(seq_along(lengths), lengths))) %>%
 #   group_by(grp) %>%
@@ -42,12 +50,12 @@ dati2 <- dati2%>%mutate(year =year(ymd(amg)))
 #             superficieCompetitor=unique(superficieCompetitor),
 #             discount=unique(discount)
 #   )
-# dati2
+# dati
 
 
 ## Category unit sales (c, t)
 # vendite totali per una classe c nella settimana t 
-vende_cl <- dati2 %>% 
+vendite_cl <- dati %>% 
   arrange(codicepdv,classe,year,week) %>% 
   mutate(grp = with(rle(paste0(codicepdv,classe,week,year)), rep(seq_along(lengths), lengths))) %>%
   mutate(unitmean = mean(unita_tot),guadagnimean = mean(guadagno)) %>%
@@ -59,14 +67,17 @@ vende_cl <- dati2 %>%
     classe = unique(classe),
     unitatot = sum(unita_tot),
     guadagni_tot = sum(guadagno),
-    season_unita = mean(unita_tot)/unitmean,
-    season_guadagni = mean(guadagno)/guadagnimean
+    season_unita = mean(unita_tot)/unique(unitmean),
+    season_guadagni = mean(guadagno)/unique(guadagnimean)
   )
 
 
-dati2 <- dati2 %>% left_join(vende_cl,by = c('codicepdv','week','year','classe')) 
+dati <- dati %>% left_join(vendite_cl,by = c('codicepdv','week','year','classe')) 
 
-dati2 <- dati2 %>% select(-grp)
-dati2 <- dati2 %>% select(-scontoatipico_tot)
-dati2 <- dati2 %>% select(-c(daylag,categoria))
+rm(vendite_cl)
+gc()
+
+dati <- dati %>% select(-c(grp,scontoatipico_tot,daylag,categoria))
+head(dati)
+object.size(dati)
 
