@@ -9,6 +9,7 @@ dbDisconnect(connection)
 rm(connection)
 gc()
 
+
 dati <- na.omit(dati)
 
 classi <- read.csv('dati.csv')
@@ -20,6 +21,8 @@ dati <- dati %>% left_join(classi,by='codicearticolo')
 
 rm(classi)
 gc()
+
+
 dati <- dati%>%mutate(guadagno = unita_tot*margine)
 dati <- dati%>%mutate(week =week(ymd(amg)))
 dati <- dati%>%mutate(year =year(ymd(amg)))
@@ -76,10 +79,32 @@ vendite_cl <- dati %>%
 rm(medie)
 gc()
 
+
 dati <- dati %>% left_join(vendite_cl,by = c('codicepdv','week','year','classe')) 
 
 rm(vendite_cl)
 gc()
 
+
 dati <- dati %>% select(-c(grp,scontoatipico_tot,daylag,categoria))
+
+
+
+medie <- dati %>% 
+         select(unita_tot,guadagno,codicepdv,codicearticolo,promo) %>% 
+         filter(promo==-1) %>%
+         select(-promo) %>%
+         aggregate(as.formula('. ~ codicepdv+codicearticolo'),.,mean) %>% 
+         rename(baseline_unita = unita_tot,baseline_guadagno=guadagno)
+
+dati <- dati %>% left_join(medie,by=c('codicepdv','codicearticolo'))
+rm(medie)
+gc()
+
+dati <- dati %>% mutate(gross_lift_unita=unita_tot-baseline_unita,gross_lift_guadagno=guadagno-baseline_guadagno) %>% select(-c(baseline_unita,baseline_guadagno))
+
+total_gross_lift <- dati %>%
+                    mutate(total_gross_lift_unita = gross_lift_unita,total_gross_lift_guadagno = gross_lift_guadagno)%>%
+                    aggregate(as.formula('total_gross_lift_unita ~ codicepdv+classe+week+year'),.,sum)  %>%
+                    aggregate(as.formula('total_gross_lift_guadagno ~ codicepdv+classe+week+year'),.,sum)  
 
